@@ -164,7 +164,8 @@ def bev_from_pcl(lidar_pcl, configs):
     ## step 3 : extract all points with identical x and y such that only the top-most z-coordinate is kept (use numpy.unique)
     ##          also, store the number of points per x,y-cell in a variable named "counts" for use in the next task
 
-    
+    lidar_top_pcl[lidar_top_pcl[:,3]>1,3] = 1
+
     _, idx_height_unique, counts  = np.unique(lidar_top_pcl[:, 0:2], axis=0, return_index=True, return_counts=True)
     
     lidar_top_pcl  = lidar_top_pcl[idx_height_unique]
@@ -172,8 +173,7 @@ def bev_from_pcl(lidar_pcl, configs):
     ## step 4 : assign the intensity value of each unique entry in lidar_top_pcl to the intensity map 
     ##          make sure that the intensity is scaled in such a way that objects of interest (e.g. vehicles) are clearly visible    
     ##          also, make sure that the influence of outliers is mitigated by normalizing intensity on the difference between the max. and min. value within the point cloud
-    lidar_top_pcl[lidar_top_pcl[:,3]>1.0,3] = 1.0
-
+   
     intensity_map[np.int_(lidar_top_pcl[:, 0]), np.int_(lidar_top_pcl[:, 1])] = lidar_top_pcl[:, 3] /(np.amax(lidar_top_pcl[:,3])-np.amin(lidar_top_pcl[:,3]))
 
     
@@ -204,13 +204,19 @@ def bev_from_pcl(lidar_pcl, configs):
     
     ##          make sure that each entry is normalized on the difference between the upper and lower height defined in the config file
     ##          use the lidar_pcl_top data structure from the previous task to access the pixels of the height_map
+    idx_height = np.lexsort((-lidar_pcl_cpy[:, 2], lidar_pcl_cpy[:, 1], lidar_pcl_cpy[:, 0]))
+    lidar_top_pcl = lidar_pcl_cpy[idx_height]
+    _, idx_height_unique, counts  = np.unique(lidar_top_pcl[:, 0:2], axis=0, return_index=True, return_counts=True)
+    
+    lidar_top_pcl  = lidar_top_pcl[idx_height_unique]
+    
     height_map[np.int_(lidar_top_pcl[:, 0]), np.int_(lidar_top_pcl[:, 1])] = lidar_top_pcl[:, 2] / float(np.abs(configs.lim_z[1] - configs.lim_z[0]))
 
     ## step 3 : temporarily visualize the intensity map using OpenCV to make sure that vehicles separate well from the background
     if vis:
         img_height = height_map * 256
         img_height = img_height.astype(np.uint8)
-        cv2.imshow('img_height', img_intensity)
+        cv2.imshow('img_height', img_height)
         cv2.waitKey(0)
         cv2.destroyAllWindows()
     #######
